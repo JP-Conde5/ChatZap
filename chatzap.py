@@ -20,29 +20,64 @@ def iniciar_cliente():
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as socket_client:
             socket_client.connect((HOST, PORT))
             tk.Label(janela_cliente, text="Conecado ao servido").grid(row=linha_local, column=0)
-            linha_local += 1
-            tk.Label(janela_cliente, text="Sua mensagem").grid(row=linha_local, column=0)
-            mensagem = tk.Entry(janela_cliente)
-            mensagem.grid(row=linha_local, column=1)
-            mensagem = mensagem.get()
-            def enviar_mensagem():
-                socket_client.sendall(mensagem.encode())
-                while True:
-                    dados = socket_client.recv(1024)  # Recebe dados do servidor
-                    if not dados:
-                        break
-                    dados = dados.decode()
-                    tk.Label(janela_cliente, text=f"Servidor: {mensagem}").grid(row=linha, column=0)
-            tk.Button(janela_cliente, text="Enviar e espera", command=enviar_mensagem)
-
-    
+            flag = [True]
+            while flag[0]:
+                linha_local += 1
+                tk.Label(janela_cliente, text="Sua mensagem").grid(row=linha_local, column=0)
+                mensagem = tk.Entry(janela_cliente)
+                mensagem.grid(row=linha_local, column=1)
+                mensagem = mensagem.get()
+                def enviar_mensagem():
+                    socket_client.sendall(mensagem.encode())
+                    while True:
+                        dados = socket_client.recv(1024)  # Recebe dados do servidor
+                        if not dados:
+                            flag[0] = False
+                            break
+                        dados = dados.decode()
+                        tk.Label(janela_cliente, text=f"Servidor: {mensagem}").grid(row=linha, column=0)
+                tk.Button(janela_cliente, text="Enviar e espera", command=enviar_mensagem)
     tk.Button(janela_cliente, text="Conectar", command=conectar_cliente)
         
     
 
 
 def iniciar_servidor():
-    print("oi")
+    janela_servidor = tk.Toplevel()
+    janela_servidor.geometry("800x600")
+    janela_servidor.title("Servidor")
+    linha = 0
+
+    HOST = socket.gethostbyname_ex(socket.gethostname())[2][0] 
+    PORT = 65432 
+    tk.Label(janela_servidor, text=f"Seu IP é: {HOST}").grid(row=linha, column=0)
+    linha += 1
+    tk.Label(janela_servidor, text="Aguardando conexão...").grid(row=linha, column=0)
+    linha += 1
+
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as socket_server:
+        socket_server.bind((HOST, PORT))
+        socket_server.listen()
+
+        tk.Label(janela_servidor, text="Servidor pronto, aguardando cliente...").grid(row=linha, column=0)
+        linha += 1
+
+        connection, address = socket_server.accept()
+        tk.Label(janela_servidor, text=f"Cliente conectado: {address}").grid(row=linha, column=0)
+        linha += 1
+
+        Thread(target=receber_mensagens, args=(connection,), daemon=True).start()
+
+        # Função para enviar mensagens ao cliente
+        def enviar_mensagem():
+            mensagem = entrada_mensagem.get()
+            connection.sendall(mensagem.encode())
+            tk.Label(janela_servidor, text=f"Servidor: {mensagem}").grid(row=linha, column=0)
+            entrada_mensagem.delete(0, tk.END)
+
+        entrada_mensagem = tk.Entry(janela_servidor)
+        entrada_mensagem.grid(row=linha, column=0)
+        tk.Button(janela_servidor, text="Enviar", command=enviar_mensagem).grid(row=linha, column=1)
 
 
 def gerencia_escolha():
